@@ -39,9 +39,9 @@ with open("./README.md") as readme:
 
 
 setup(
-    name="eth-account",
+    name="coti-eth-account",
     # *IMPORTANT*: Don't manually change the version here. Use `make bump`, as described in readme
-    version="0.13.4",
+    version="0.0.0",
     description="""eth-account: Sign Ethereum transactions and messages with local private keys""",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -60,6 +60,7 @@ setup(
         "rlp>=1.0.0",
         "ckzg>=2.0.0",
         "pydantic>=2.0.0",
+        "coti-sdk>=1.0.4"
     ],
     python_requires=">=3.8, <4",
     extras_require=extras_require,

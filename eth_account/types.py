@@ -3,6 +3,7 @@ from typing import (
     Any,
     Dict,
     Sequence,
+    TypedDict,
     Union,
 )
 
@@ -41,3 +42,9 @@ class Language(enum.Enum):
         if other.__class__ is Language:
             return self.value < other.value
         return NotImplemented
+
+
+class UserOnboardInfo(TypedDict):
+    aes_key: str
+    rsa_key_pair: tuple[str, str]
+    tx_hash: str
