@@ -98,6 +98,21 @@ from eth_account.types import (
     Language,
     PrivateKeyType,
     TransactionDictType,
+    UserOnboardInfo
+)
+from coti.crypto_utils import (
+    build_input_text,
+    build_string_input_text,
+    decrypt_string,
+    decrypt_uint
+)
+from coti.types import (
+    CtBool,
+    CtString,
+    CtUint,
+    ItBool,
+    ItString,
+    ItUint
 )
 
 VRS = TypeVar("VRS", bytes, HexStr, int)
@@ -274,12 +289,13 @@ class Account(AccountLocalActions):
         )
 
     @combomethod
-    def from_key(self, private_key: PrivateKeyType) -> LocalAccount:
+    def from_key(self, private_key: PrivateKeyType, user_onboard_info: UserOnboardInfo = None) -> LocalAccount:
         r"""
         Returns a convenient object for working with the given private key.
 
         :param private_key: The raw private key
         :type private_key: hex str, bytes, int or :class:`eth_keys.datatypes.PrivateKey`
+        :param ~eth_account.types UserOnboardInfo: A dictionary containing the information from the user's onboarding procedure
         :return: object with methods for signing and encrypting
         :rtype: LocalAccount
 
@@ -297,7 +313,7 @@ class Account(AccountLocalActions):
             # but without the private key argument
         """
         key = self._parse_private_key(private_key)
-        return LocalAccount(key, self)
+        return LocalAccount(key, self, user_onboard_info)
 
     @combomethod
     def from_mnemonic(
@@ -305,6 +321,7 @@ class Account(AccountLocalActions):
         mnemonic: str,
         passphrase: str = "",
         account_path: str = ETHEREUM_DEFAULT_PATH,
+        user_onboard_info: UserOnboardInfo = None
     ) -> LocalAccount:
         """
         Generate an account from a mnemonic.
@@ -315,6 +332,7 @@ class Account(AccountLocalActions):
         :param str passphrase: Optional passphrase used to encrypt the mnemonic
         :param str account_path: Specify an alternate HD path for deriving the seed
             using BIP32 HD wallet key derivation.
+        :param ~eth_account.types UserOnboardInfo: A dictionary containing the information from the user's onboarding procedure
         :return: object with methods for signing and encrypting
         :rtype: LocalAccount
 
@@ -370,7 +388,7 @@ class Account(AccountLocalActions):
         seed = seed_from_mnemonic(mnemonic, passphrase)
         private_key = key_from_seed(seed, account_path)
         key = self._parse_private_key(private_key)
-        return LocalAccount(key, self)
+        return LocalAccount(key, self, user_onboard_info)
 
     @combomethod
     def create_with_mnemonic(
@@ -1043,3 +1061,34 @@ class Account(AccountLocalActions):
         )
         message_hash = _hash_eip191_message(signable_message)
         return cast(SignedMessage, self._sign_hash(message_hash, private_key))
+
+    @combomethod
+    def encrypt_value(self, plaintext_value: Union[bool, int, str], contract_address: str, function_selector: str, private_key: PrivateKeyType, aes_key: str) -> Union[ItBool, ItUint, ItString]:
+        """
+        Encrypt a value to be passed as an argument for a contract interaction.
+
+        :param plaintext_value: value to encrypt
+        :param contract_address: address of the contract
+        :param function_selector: four-byte selector of the function being called
+        :param private_key: hex str, bytes, int or :class:`eth_keys.datatypes.PrivateKey`
+        :param aes_key: AES key associated with the account
+        """
+        
+        if type(plaintext_value) is bool or type(plaintext_value) is int:
+            return build_input_text(plaintext_value, aes_key, Account.from_key(private_key).address, contract_address, function_selector, private_key)
+        else:
+            return build_string_input_text(plaintext_value, aes_key, Account.from_key(private_key).address, contract_address, function_selector, private_key)
+
+    @combomethod
+    def decrypt_value(self, ciphertext: Union[CtBool, CtUint, CtString], aes_key: str) -> Union[bool, int, str]:
+        """
+        Decrypt a value encrypted with the user's AES key.
+
+        :param ciphertext: value to decrypt
+        :param aes_key: AES key associated with the account
+        """
+
+        if type(ciphertext) is int:
+            return decrypt_uint(ciphertext, aes_key)
+        else:
+            return decrypt_string(ciphertext, aes_key)

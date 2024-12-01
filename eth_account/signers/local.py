@@ -2,6 +2,7 @@ from typing import (
     Any,
     Dict,
     Optional,
+    Union,
     cast,
 )
 
@@ -32,8 +33,22 @@ from eth_account.signers.base import (
 from eth_account.types import (
     Blobs,
     TransactionDictType,
+    UserOnboardInfo
 )
-
+from coti.crypto_utils import (
+    build_input_text,
+    build_string_input_text,
+    decrypt_string,
+    decrypt_uint
+)
+from coti.types import (
+    CtBool,
+    CtString,
+    CtUint,
+    ItBool,
+    ItString,
+    ItUint
+)
 
 class LocalAccount(BaseAccount):
     r"""
@@ -57,12 +72,13 @@ class LocalAccount(BaseAccount):
         b"\\x01\\x23..."
     """
 
-    def __init__(self, key: PrivateKey, account: AccountLocalActions):
+    def __init__(self, key: PrivateKey, account: AccountLocalActions, user_onboard_info: UserOnboardInfo = None):
         """
         Initialize a new account with the given private key.
 
         :param eth_keys.PrivateKey key: to prefill in private key execution
         :param ~eth_account.account.Account account: the key-unaware management API
+        :param ~eth_account.types UserOnboardInfo: A dictionary containing the information from the user's onboarding procedure
         """
         self._publicapi: AccountLocalActions = account
 
@@ -72,6 +88,8 @@ class LocalAccount(BaseAccount):
         self._private_key = key_raw
 
         self._key_obj: PrivateKey = key
+
+        self._user_onboard_info = user_onboard_info
 
     @property
     def address(self) -> ChecksumAddress:
@@ -83,6 +101,31 @@ class LocalAccount(BaseAccount):
         Get the private key.
         """
         return self._private_key
+    
+    @property
+    def user_onboard_info(self) -> UserOnboardInfo:
+        return self._user_onboard_info
+    
+    @property
+    def aes_key(self) -> Union[str, None]:
+        if self._user_onboard_info is None:
+            return None
+        
+        return self._user_onboard_info['aes_key']
+    
+    @property
+    def rsa_key_pair(self) -> Union[tuple[str, str], None]:
+        if self._user_onboard_info is None:
+            return None
+        
+        return self._user_onboard_info['rsa_key_pair']
+    
+    @property
+    def onboard_tx_hash(self) -> Union[str, None]:
+        if self._user_onboard_info is None:
+            return None
+        
+        return self._user_onboard_info['tx_hash']
 
     def encrypt(
         self,
@@ -133,3 +176,47 @@ class LocalAccount(BaseAccount):
 
     def __bytes__(self) -> bytes:
         return self.key
+
+    def set_user_onboard_info(self, user_onboard_info: UserOnboardInfo):
+        self._user_onboard_info = user_onboard_info
+    
+    def set_aes_key(self, aes_key: str):
+        self._user_onboard_info['aes_key'] = aes_key
+    
+    def set_rsa_key_pair(self, rsa_key_pair: tuple[str, str]):
+        self._user_onboard_info['rsa_key_pair'] = rsa_key_pair
+    
+    def set_onboard_tx_hash(self, tx_hash: str):
+        self._user_onboard_info['tx_hash'] = tx_hash
+    
+    def encrypt_value(self, plaintext_value: Union[bool, int, str], contract_address: str, function_selector: str) -> Union[ItBool, ItUint, ItString]:
+        """
+        Encrypt a value to be passed as an argument for a contract interaction.
+
+        :param plaintext_value: value to encrypt
+        :param contract_address: address of the contract
+        :param function_selector: four-byte selector of the function being called
+        """
+
+        if self.aes_key is None:
+            raise RuntimeError('user AES key is not defined')
+
+        if type(plaintext_value) is bool or type(plaintext_value) is int:
+            return build_input_text(plaintext_value, self.aes_key, self.address, contract_address, function_selector, self._private_key)
+        else:
+            return build_string_input_text(plaintext_value, self.aes_key, self.address, contract_address, function_selector, self._private_key)
+
+    def decrypt_value(self, ciphertext: Union[CtBool, CtUint, CtString]) -> Union[bool, int, str]:
+        """
+        Decrypt a value encrypted with the user's AES key.
+
+        :param ciphertext: value to decrypt
+        """
+
+        if self.aes_key is None:
+            raise RuntimeError('user AES key is not defined')
+        
+        if type(ciphertext) is int:
+            return decrypt_uint(ciphertext, self.aes_key)
+        else:
+            return decrypt_string(ciphertext, self.aes_key)
