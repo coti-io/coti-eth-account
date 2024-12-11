@@ -41,7 +41,7 @@ with open("./README.md") as readme:
 setup(
     name="coti-eth-account",
     # *IMPORTANT*: Don't manually change the version here. Use `make bump`, as described in readme
-    version="0.0.0",
+    version='v1.0.2',
     description="""coti-eth-account: Sign COTI messages/transactions with local private keys and encrypt/decrypt data with local AES keys.""",
     long_description=long_description,
     long_description_content_type="text/markdown",
