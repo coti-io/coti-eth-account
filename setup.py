@@ -42,12 +42,12 @@ setup(
     name="coti-eth-account",
     # *IMPORTANT*: Don't manually change the version here. Use `make bump`, as described in readme
     version="0.0.0",
-    description="""eth-account: Sign Ethereum transactions and messages with local private keys""",
+    description="""coti-eth-account: Sign COTI messages/transactions with local private keys and encrypt/decrypt data with local AES keys.""",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="The Ethereum Foundation",
-    author_email="snakecharmers@ethereum.org",
-    url="https://github.com/ethereum/eth-account",
+    author="COTI Development",
+    author_email="dev@coti.io",
+    url="https://github.com/coti-io/coti-eth-account",
     include_package_data=True,
     install_requires=[
         "bitarray>=2.4.0",
@@ -67,7 +67,7 @@ setup(
     py_modules=["eth_account"],
     license="MIT",
     zip_safe=False,
-    keywords="ethereum",
+    keywords=["coti", "privacy", "ethereum", "blockchain", "web3", "garbled-circuits", "l2", "on-chain-compute"],
     packages=find_packages(exclude=["scripts", "scripts.*", "tests", "tests.*"]),
     package_data={
         "eth_account": [
